@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   class?: string;
 }>();
+
+const contentClass = computed(() => {
+  return cn('flex flex-row items-center gap-1', props.class);
+});
 </script>
 
 <template>
-  <div
-    :class="cn('flex flex-row items-center gap-1', class)"
-  >
+  <div :class="contentClass">
     <slot />
   </div>
 </template> 

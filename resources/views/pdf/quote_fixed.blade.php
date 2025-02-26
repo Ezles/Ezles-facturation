@@ -17,7 +17,7 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            position: relative; /* Pour le positionnement absolu du logo */
+            position: relative;
         }
         .logo-container {
             position: absolute;
@@ -34,7 +34,7 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 40px;
-            padding-top: 70px; /* Espace pour le logo */
+            padding-top: 70px;
         }
         .header-left {
             width: 100%;
@@ -258,11 +258,11 @@
                     </tr>
                     <tr>
                         <td>Date d'émission:</td>
-                        <td>{{ $devis->date_emission ? $devis->date_emission->format('d/m/Y') : 'N/A' }}</td>
+                        <td>{{ $devis->date_emission->format('d/m/Y') }}</td>
                     </tr>
                     <tr>
                         <td>Date de validité:</td>
-                        <td>{{ $devis->date_validite ? $devis->date_validite->format('d/m/Y') : 'N/A' }}</td>
+                        <td>{{ $devis->date_validite->format('d/m/Y') }}</td>
                     </tr>
                 </table>
             </div>
@@ -275,11 +275,10 @@
         <div class="info-block">
             <h3>CLIENT</h3>
             <div class="client-info">
-                @if($devis->client)
                 <strong>{{ $devis->client->nom }}</strong><br>
                 {{ $devis->client->adresse }}<br>
                 {{ $devis->client->code_postal }} {{ $devis->client->ville }}<br>
-                @if(isset($devis->client->pays)){{ $devis->client->pays }}<br>@endif
+                {{ $devis->client->pays }}<br>
                 @if($devis->client->email)
                 Email: {{ $devis->client->email }}<br>
                 @endif
@@ -289,14 +288,11 @@
                 @if($devis->client->siret)
                 SIRET: {{ $devis->client->siret }}
                 @endif
-                @else
-                <strong>Client non défini</strong>
-                @endif
             </div>
         </div>
 
         <div class="validity">
-            Ce devis est valable jusqu'au {{ $devis->date_validite ? $devis->date_validite->format('d/m/Y') : 'N/A' }}
+            Ce devis est valable jusqu'au {{ $devis->date_validite->format('d/m/Y') }}
         </div>
 
         <table class="items-table">
@@ -362,7 +358,7 @@
                         <p>{{ $devis->user->name }}</p>
                     </td>
                     <td class="signature-cell">
-                        <p><strong>Pour {{ $devis->client ? $devis->client->nom : 'Client' }}</strong></p>
+                        <p><strong>Pour {{ $devis->client->nom }}</strong></p>
                         <p>Nom et fonction du signataire:</p>
                         <div class="signature-line"></div>
                         <p class="signature-text">Signature précédée de la mention "Bon pour accord"</p>

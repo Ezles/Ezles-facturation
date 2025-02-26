@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
-import { inject, onMounted, onUnmounted, ref, watch } from 'vue';
+import { inject, onMounted, onUnmounted, ref, watch, computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   class?: string;
   position?: 'popper' | 'item-aligned';
 }>();
@@ -13,6 +13,14 @@ const select = inject('select') as {
 };
 
 const container = ref<HTMLDivElement | null>(null);
+
+const contentClass = computed(() => {
+  return cn(
+    'relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80',
+    props.position === 'popper' && 'translate-y-1',
+    props.class
+  );
+});
 
 // Close on click outside
 const handleClickOutside = (event: MouseEvent) => {
@@ -41,13 +49,7 @@ onUnmounted(() => {
 
 <template>
   <div v-if="select.open.value" ref="container">
-    <div
-      :class="cn(
-        'relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-80',
-        position === 'popper' && 'translate-y-1',
-        class
-      )"
-    >
+    <div :class="contentClass">
       <div class="p-1">
         <slot />
       </div>

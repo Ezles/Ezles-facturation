@@ -5,10 +5,9 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\QuoteController;
+use App\Http\Controllers\ClientController;
 
-// Page d'accueil (landing page) - Redirection vers le dashboard si connecté
 Route::get('/', function () {
-    // Si l'utilisateur est connecté, rediriger vers le dashboard
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
@@ -16,7 +15,6 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-// Dashboard route now uses the InvoiceController index method
 Route::get('dashboard', [InvoiceController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
@@ -51,6 +49,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/quotes/{id}/accept', [QuoteController::class, 'markAsAccepted'])->name('quotes.accept');
     Route::post('/quotes/{id}/reject', [QuoteController::class, 'markAsRejected'])->name('quotes.reject');
     Route::post('/quotes/{id}/convert', [QuoteController::class, 'convertToInvoice'])->name('quotes.convert');
+});
+
+// Routes pour les clients
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+    Route::get('/clients/create', [ClientController::class, 'create'])->name('clients.create');
+    Route::post('/clients', [ClientController::class, 'store'])->name('clients.store');
+    Route::get('/clients/{id}', [ClientController::class, 'show'])->name('clients.show');
+    Route::get('/clients/{id}/edit', [ClientController::class, 'edit'])->name('clients.edit');
+    Route::put('/clients/{id}', [ClientController::class, 'update'])->name('clients.update');
+    Route::delete('/clients/{id}', [ClientController::class, 'destroy'])->name('clients.destroy');
 });
 
 require __DIR__.'/settings.php';

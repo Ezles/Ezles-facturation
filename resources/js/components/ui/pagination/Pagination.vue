@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   class?: string;
 }>();
+
+const paginationClass = computed(() => {
+  return cn('mx-auto flex w-full justify-center', props.class);
+});
 </script>
 
 <template>
   <nav
     role="navigation"
     aria-label="pagination"
-    :class="cn('mx-auto flex w-full justify-center', class)"
+    :class="paginationClass"
   >
     <slot />
   </nav>

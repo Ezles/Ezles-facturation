@@ -16,21 +16,32 @@ import {
 import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-vue-next';
 import { ref, computed, onMounted, nextTick } from 'vue';
 
+// Définir l'interface pour le client
+interface Client {
+    id: number;
+    nom: string;
+    email: string | null;
+    adresse: string;
+    code_postal: string | null;
+    ville: string | null;
+    telephone: string | null;
+    siret: string | null;
+    numero_tva: string | null;
+}
+
+// Définir l'interface pour une ligne de devis
+interface LigneDevis {
+    description: string;
+    quantite: number;
+    prix_unitaire: number;
+    taux_tva: number;
+}
+
 // Définir les props pour les données passées depuis le contrôleur
 const props = defineProps<{
     devisNumber: string;
     defaultValidityDays: number;
-    clients: Array<{
-        id: number;
-        nom: string;
-        email: string | null;
-        adresse: string;
-        code_postal: string | null;
-        ville: string | null;
-        telephone: string | null;
-        siret: string | null;
-        tva_intracom: string | null;
-    }>;
+    clients: Client[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -47,6 +58,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 // Référence pour la recherche de client
 const clientSearch = ref('');
 const showClientDropdown = ref(false);
+const showNewClientModal = ref(false);
+
+// Formulaire pour le nouveau client
+const newClientForm = useForm({
+    nom: '',
+    email: '',
+    adresse: '',
+    code_postal: '',
+    ville: '',
+    telephone: '',
+    siret: '',
+    numero_tva: ''
+});
 
 // Filtrer les clients en fonction de la recherche
 const filteredClients = computed(() => {
@@ -68,7 +92,16 @@ const defaultValidityDate = () => {
 };
 
 // Formulaire pour la création de devis
-const form = useForm({
+const form = useForm<{
+    numero: string;
+    date_emission: string;
+    date_validite: string;
+    client_id: string | number;
+    lignes: LigneDevis[];
+    conditions_paiement: string;
+    notes: string;
+    mentions_legales: string;
+}>({
     numero: props.devisNumber,
     date_emission: new Date().toISOString().substr(0, 10),
     date_validite: defaultValidityDate(),
@@ -83,15 +116,43 @@ const form = useForm({
     ],
     conditions_paiement: 'Paiement à réception de facture',
     notes: 'Merci pour votre confiance !',
-    mentions_legales: 'Ce devis est valable 30 jours à compter de sa date d\'émission.',
-    send_email: false
+    mentions_legales: 'Ce devis est valable 30 jours à compter de sa date d\'émission.'
 });
 
 // Sélectionner un client depuis la liste déroulante
-const selectClient = (client: any) => {
+const selectClient = (client: Client) => {
     form.client_id = client.id;
     clientSearch.value = client.nom;
     showClientDropdown.value = false;
+};
+
+// Créer un nouveau client
+const createNewClient = () => {
+    // Initialiser le formulaire avec le nom recherché
+    newClientForm.nom = clientSearch.value;
+    
+    // Envoyer la requête pour créer le client
+    newClientForm.post(route('clients.store'), {
+        preserveScroll: true,
+        onSuccess: (response) => {
+            // Récupérer le client créé depuis la réponse
+            const newClient = response?.props?.client;
+            
+            if (newClient) {
+                // Sélectionner le nouveau client
+                selectClient(newClient);
+                
+                // Ajouter le client à la liste des clients
+                props.clients.push(newClient);
+                
+                // Fermer le modal
+                showNewClientModal.value = false;
+                
+                // Réinitialiser le formulaire
+                newClientForm.reset();
+            }
+        }
+    });
 };
 
 // Calculer le sous-total HT
@@ -217,6 +278,14 @@ const submit = () => {
                                         </li>
                                     </ul>
                                 </div>
+                                <div v-if="showClientDropdown && clientSearch && filteredClients.length === 0" class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700">
+                                    <div class="p-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Aucun client trouvé avec ce nom.</p>
+                                        <Button @click="showNewClientModal = true; showClientDropdown = false" class="w-full">
+                                            Créer un nouveau client
+                                        </Button>
+                                    </div>
+                                </div>
                                 <div v-if="form.errors.client_id" class="text-sm text-red-500 mt-1">{{ form.errors.client_id }}</div>
                             </div>
                         </div>
@@ -328,15 +397,6 @@ const submit = () => {
                                 <textarea id="mentions_legales" v-model="form.mentions_legales" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
                                 <div v-if="form.errors.mentions_legales" class="text-sm text-red-500 mt-1">{{ form.errors.mentions_legales }}</div>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <input 
-                                    type="checkbox" 
-                                    id="send_email" 
-                                    v-model="form.send_email" 
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-                                />
-                                <Label for="send_email">Envoyer le devis par email au client après création</Label>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -352,6 +412,74 @@ const submit = () => {
                     </Button>
                 </div>
             </form>
+        </div>
+        
+        <!-- Modal pour créer un nouveau client -->
+        <div v-if="showNewClientModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Créer un nouveau client</h2>
+                    <button @click="showNewClientModal = false" class="text-gray-500 hover:text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <form @submit.prevent="createNewClient">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <Label for="nom">Nom *</Label>
+                            <Input id="nom" v-model="newClientForm.nom" required />
+                            <div v-if="newClientForm.errors.nom" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.nom }}</div>
+                        </div>
+                        <div>
+                            <Label for="email">Email</Label>
+                            <Input id="email" type="email" v-model="newClientForm.email" />
+                            <div v-if="newClientForm.errors.email" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.email }}</div>
+                        </div>
+                        <div>
+                            <Label for="adresse">Adresse *</Label>
+                            <Input id="adresse" v-model="newClientForm.adresse" required />
+                            <div v-if="newClientForm.errors.adresse" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.adresse }}</div>
+                        </div>
+                        <div>
+                            <Label for="code_postal">Code postal</Label>
+                            <Input id="code_postal" v-model="newClientForm.code_postal" />
+                            <div v-if="newClientForm.errors.code_postal" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.code_postal }}</div>
+                        </div>
+                        <div>
+                            <Label for="ville">Ville</Label>
+                            <Input id="ville" v-model="newClientForm.ville" />
+                            <div v-if="newClientForm.errors.ville" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.ville }}</div>
+                        </div>
+                        <div>
+                            <Label for="telephone">Téléphone</Label>
+                            <Input id="telephone" v-model="newClientForm.telephone" />
+                            <div v-if="newClientForm.errors.telephone" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.telephone }}</div>
+                        </div>
+                        <div>
+                            <Label for="siret">SIRET</Label>
+                            <Input id="siret" v-model="newClientForm.siret" />
+                            <div v-if="newClientForm.errors.siret" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.siret }}</div>
+                        </div>
+                        <div>
+                            <Label for="numero_tva">TVA Intracommunautaire</Label>
+                            <Input id="numero_tva" v-model="newClientForm.numero_tva" />
+                            <div v-if="newClientForm.errors.numero_tva" class="text-sm text-red-500 mt-1">{{ newClientForm.errors.numero_tva }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2">
+                        <Button type="button" variant="outline" @click="showNewClientModal = false">
+                            Annuler
+                        </Button>
+                        <Button type="submit" :disabled="newClientForm.processing">
+                            Créer le client
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </div>
     </AppLayout>
 </template> 

@@ -42,7 +42,7 @@ class QuoteGenerated extends Mailable
             tags: ['devis', 'client'],
             metadata: [
                 'devis_id' => $this->devis->id,
-                'client_id' => $this->devis->client_id,
+                'client_id' => $this->devis->client_id ?? null,
             ],
         );
     }
@@ -65,8 +65,21 @@ class QuoteGenerated extends Mailable
     public function attachments(): array
     {
         try {
+            // Ensure dates are properly formatted
+            if ($this->devis->date_emission) {
+                if (!$this->devis->date_emission instanceof \Carbon\Carbon) {
+                    $this->devis->date_emission = \Carbon\Carbon::parse($this->devis->date_emission);
+                }
+            }
+            
+            if ($this->devis->date_validite) {
+                if (!$this->devis->date_validite instanceof \Carbon\Carbon) {
+                    $this->devis->date_validite = \Carbon\Carbon::parse($this->devis->date_validite);
+                }
+            }
+            
             // Générer le PDF du devis
-            $pdf = PDF::loadView('pdf.quote', [
+            $pdf = PDF::loadView('pdf.quote_fixed', [
                 'devis' => $this->devis
             ]);
 
@@ -82,7 +95,8 @@ class QuoteGenerated extends Mailable
             ]);
 
             // Format professionnel pour le nom du fichier
-            $fileName = 'Devis_' . $this->devis->numero . '_' . $this->devis->date_emission->format('Y-m-d') . '.pdf';
+            $fileName = 'Devis_' . $this->devis->numero . '_' . 
+                ($this->devis->date_emission ? $this->devis->date_emission->format('Y-m-d') : date('Y-m-d')) . '.pdf';
 
             return [
                 Attachment::fromData(fn () => $pdf->output(), $fileName)

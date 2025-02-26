@@ -105,7 +105,7 @@
         </div>
         
         <div class="content">
-            <p>Bonjour {{ $devis->client->nom }},</p>
+            <p>Bonjour {{ $devis->client ? $devis->client->nom : 'Client' }},</p>
             
             <div class="info-box">
                 <p>Suite à notre échange, veuillez trouver ci-joint notre proposition commerciale détaillée pour les prestations demandées.</p>
@@ -120,7 +120,7 @@
                     </tr>
                     <tr>
                         <th>Date d'émission:</th>
-                        <td>{{ $devis->date_emission->format('d/m/Y') }}</td>
+                        <td>{{ $devis->date_emission ? $devis->date_emission->format('d/m/Y') : 'N/A' }}</td>
                     </tr>
                     <tr>
                         <th>Date de validité:</th>

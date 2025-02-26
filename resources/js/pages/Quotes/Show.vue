@@ -152,18 +152,18 @@ const sendByEmail = () => {
             
             <!-- Actions rapides -->
             <div class="flex flex-wrap gap-2 mb-6">
-                <Button variant="outline" @click="router.visit(`/quotes/${devis.id}/pdf`)" target="_blank">
+                <a :href="`/quotes/${devis.id}/pdf`" target="_blank" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
                     <FileText class="mr-2 h-4 w-4" />
                     Voir le PDF
-                </Button>
-                <Button variant="outline" @click="router.visit(`/quotes/${devis.id}/download`)">
+                </a>
+                <a :href="`/quotes/${devis.id}/download`" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
                     <Download class="mr-2 h-4 w-4" />
                     Télécharger
-                </Button>
-                <Button variant="outline" @click="window.print()">
+                </a>
+                <a :href="`/quotes/${devis.id}/pdf`" target="_blank" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
                     <Printer class="mr-2 h-4 w-4" />
                     Imprimer
-                </Button>
+                </a>
                 <Button variant="outline" @click="sendByEmail()" v-if="devis.client.email">
                     <Mail class="mr-2 h-4 w-4" />
                     Envoyer par email

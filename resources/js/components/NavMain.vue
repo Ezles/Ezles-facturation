@@ -7,12 +7,14 @@ defineProps<{
     items: NavItem[];
 }>();
 
-const page = usePage<SharedData>();
+// Utiliser Record<string, any> pour satisfaire la contrainte de PageProps
+const page = usePage<Record<string, any> & SharedData>();
 </script>
 
 <template>
     <SidebarGroup class="px-2 py-0">
         <SidebarGroupLabel>Platform</SidebarGroupLabel>
+        <SidebarGroupLabel></SidebarGroupLabel>
         <SidebarMenu>
             <SidebarMenuItem v-for="item in items" :key="item.title">
                 <SidebarMenuButton as-child :is-active="item.href === page.url">

@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
 import { MoreHorizontal } from 'lucide-vue-next';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   class?: string;
 }>();
+
+const ellipsisClass = computed(() => {
+  return cn('flex h-9 w-9 items-center justify-center', props.class);
+});
 </script>
 
 <template>
-  <div
-    :class="cn('flex h-9 w-9 items-center justify-center', class)"
-  >
+  <div :class="ellipsisClass">
     <MoreHorizontal class="h-4 w-4" />
     <span class="sr-only">More pages</span>
   </div>

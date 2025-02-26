@@ -151,31 +151,6 @@ class QuoteController extends Controller
 
             DB::commit();
 
-            // Envoyer le devis par email si demandé
-            if ($request->input('send_email', false)) {
-                $client = Client::find($validated['client_id']);
-                
-                if ($client && $client->email) {
-                    try {
-                        // Utiliser send() au lieu de queue() pour envoyer immédiatement
-                        Mail::to($client->email)
-                            ->send(new QuoteGenerated($devis->fresh(['client', 'lignes', 'user'])));
-                        
-                        return redirect()->route('quotes.index')
-                            ->with('success', 'Devis créé avec succès et email envoyé au client.');
-                    } catch (\Exception $e) {
-                        Log::error('Erreur lors de l\'envoi de l\'email du devis', [
-                            'devis_id' => $devis->id,
-                            'error' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString()
-                        ]);
-                        
-                        return redirect()->route('quotes.index')
-                            ->with('success', 'Devis créé avec succès, mais l\'email n\'a pas pu être envoyé: ' . $e->getMessage());
-                    }
-                }
-            }
-
             return redirect()->route('quotes.index')
                 ->with('success', 'Devis créé avec succès.');
 
@@ -325,31 +300,6 @@ class QuoteController extends Controller
 
             DB::commit();
 
-            // Envoyer le devis par email si demandé
-            if ($request->input('send_email', false)) {
-                $client = Client::find($validated['client_id']);
-                
-                if ($client && $client->email) {
-                    try {
-                        // Utiliser send() au lieu de queue() pour envoyer immédiatement
-                        Mail::to($client->email)
-                            ->send(new QuoteGenerated($devis->fresh(['client', 'lignes', 'user'])));
-                        
-                        return redirect()->route('quotes.index')
-                            ->with('success', 'Devis mis à jour avec succès et email envoyé au client.');
-                    } catch (\Exception $e) {
-                        Log::error('Erreur lors de l\'envoi de l\'email du devis', [
-                            'devis_id' => $devis->id,
-                            'error' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString()
-                        ]);
-                        
-                        return redirect()->route('quotes.index')
-                            ->with('success', 'Devis mis à jour avec succès, mais l\'email n\'a pas pu être envoyé: ' . $e->getMessage());
-                    }
-                }
-            }
-
             return redirect()->route('quotes.index')
                 ->with('success', 'Devis mis à jour avec succès.');
 
@@ -399,15 +349,62 @@ class QuoteController extends Controller
     /**
      * Génère un PDF du devis.
      */
-    public function generatePdf(Devis $devis)
+    public function generatePdf(string $id)
     {
-        $devis->load(['client', 'lignes', 'user']);
-        
-        $pdf = PDF::loadView('pdf.quote', [
-            'devis' => $devis
-        ]);
-        
-        return $pdf->stream('Devis_' . $devis->numero . '.pdf');
+        try {
+            $devis = Devis::with(['client', 'lignes', 'user'])->findOrFail($id);
+            
+            // Ensure dates are properly formatted
+            if ($devis->date_emission) {
+                if (!$devis->date_emission instanceof \Carbon\Carbon) {
+                    $devis->date_emission = \Carbon\Carbon::parse($devis->date_emission);
+                }
+            }
+            
+            if ($devis->date_validite) {
+                if (!$devis->date_validite instanceof \Carbon\Carbon) {
+                    $devis->date_validite = \Carbon\Carbon::parse($devis->date_validite);
+                }
+            }
+            
+            $pdf = PDF::loadView('pdf.quote_fixed', [
+                'devis' => $devis
+            ]);
+            
+            // Optimiser le PDF pour l'affichage dans le navigateur
+            $pdf->setPaper('a4', 'portrait');
+            $pdf->setOptions([
+                'dpi' => 150,
+                'defaultFont' => 'sans-serif',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isFontSubsettingEnabled' => true,
+                'isPhpEnabled' => true,
+            ]);
+            
+            // Générer un nom de fichier professionnel
+            $filename = 'Devis_' . $devis->numero;
+            if ($devis->date_emission) {
+                $filename .= '_' . $devis->date_emission->format('Y-m-d');
+            } else {
+                $filename .= '_' . date('Y-m-d');
+            }
+            $filename .= '.pdf';
+            
+            // Utiliser inline pour afficher directement dans le navigateur
+            return $pdf->stream($filename, [
+                'Attachment' => false
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la génération du PDF', [
+                'devis_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Une erreur est survenue lors de la génération du PDF: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -415,13 +412,58 @@ class QuoteController extends Controller
      */
     public function downloadPdf(string $id)
     {
-        $devis = Devis::with(['client', 'lignes', 'user'])->findOrFail($id);
-        
-        $pdf = PDF::loadView('pdf.quote', [
-            'devis' => $devis
-        ]);
-        
-        return $pdf->download('Devis_' . $devis->numero . '_' . $devis->date_emission->format('Y-m-d') . '.pdf');
+        try {
+            $devis = Devis::with(['client', 'lignes', 'user'])->findOrFail($id);
+            
+            // Ensure dates are properly formatted
+            if ($devis->date_emission) {
+                if (!$devis->date_emission instanceof \Carbon\Carbon) {
+                    $devis->date_emission = \Carbon\Carbon::parse($devis->date_emission);
+                }
+            }
+            
+            if ($devis->date_validite) {
+                if (!$devis->date_validite instanceof \Carbon\Carbon) {
+                    $devis->date_validite = \Carbon\Carbon::parse($devis->date_validite);
+                }
+            }
+            
+            $pdf = PDF::loadView('pdf.quote_fixed', [
+                'devis' => $devis
+            ]);
+            
+            // Optimiser le PDF pour le téléchargement
+            $pdf->setPaper('a4', 'portrait');
+            $pdf->setOptions([
+                'dpi' => 150,
+                'defaultFont' => 'sans-serif',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isFontSubsettingEnabled' => true,
+                'isPhpEnabled' => true,
+            ]);
+            
+            // Générer un nom de fichier professionnel
+            $filename = 'Devis_' . $devis->numero;
+            if ($devis->date_emission) {
+                $filename .= '_' . $devis->date_emission->format('Y-m-d');
+            } else {
+                $filename .= '_' . date('Y-m-d');
+            }
+            $filename .= '.pdf';
+            
+            // Forcer le téléchargement avec Attachment = true (par défaut)
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors du téléchargement du PDF', [
+                'devis_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Une erreur est survenue lors du téléchargement du PDF: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -431,6 +473,11 @@ class QuoteController extends Controller
     {
         try {
             $devis = Devis::with(['client', 'lignes', 'user'])->findOrFail($id);
+            
+            if (!$devis->client) {
+                return redirect()->back()
+                    ->with('error', 'Aucun client associé à ce devis.');
+            }
             
             if (!$devis->client->email) {
                 return redirect()->back()
